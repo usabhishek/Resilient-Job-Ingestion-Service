@@ -18,19 +18,18 @@ class Job(Base):
     location = Column(String(255), nullable=False, default="Remote / Unspecified")
     description = Column(Text, nullable=True)
     job_url = Column(String(1024), nullable=False)
-    posted_at = Column(DateTime, nullable=True, index=True)
+    posted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     raw_payload = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
-    updated_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationship to Source
     source = relationship("Source", back_populates="jobs")
 
-    # Table Constraints & Composite Indexes
+    # Table Constraints (UniqueConstraint already creates the index in PostgreSQL/SQLite)
     __table_args__ = (
         UniqueConstraint("source_id", "external_id", name="uq_source_external_id"),
-        Index("idx_jobs_source_external", "source_id", "external_id"),
     )
 
     def __repr__(self) -> str:

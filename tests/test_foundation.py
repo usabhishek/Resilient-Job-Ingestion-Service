@@ -43,18 +43,27 @@ async def test_database_connection_and_models(test_db_session):
 
 @pytest.mark.asyncio
 async def test_health_endpoint(test_db_session):
+    from unittest.mock import AsyncMock, patch
+    from app.adapters.base import SourceHealthResult
+    from app.services.ingestion import shared_pipeline
+
     async def override_get_db():
         yield test_db_session
 
     app.dependency_overrides[get_db] = override_get_db
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["database"] == "healthy"
-        assert "timestamp" in data
-        assert "sources" in data
+    # Mock health checks for 100% network isolation
+    mock_health = SourceHealthResult(source_name="greenhouse", is_healthy=True, latency_ms=10.0, message="OK")
+    with patch.object(shared_pipeline, "get_health", new_callable=AsyncMock) as mock_get_health:
+        mock_get_health.return_value = mock_health
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["database"] == "healthy"
+            assert "timestamp" in data
+            assert "sources" in data
 
     app.dependency_overrides.clear()

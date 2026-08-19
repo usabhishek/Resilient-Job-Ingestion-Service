@@ -7,12 +7,17 @@ from app.api.routes_api import pipeline as api_pipeline
 from app.api.routes_views import pipeline as views_pipeline
 from tests.conftest import GREENHOUSE_SAMPLE_PAYLOAD
 
+from app.adapters.base import SourceHealthResult
+
 @pytest.mark.asyncio
 async def test_api_health_endpoint(test_db_session):
     async def override_get_db():
         yield test_db_session
 
     app.dependency_overrides[get_db] = override_get_db
+
+    mock_health = SourceHealthResult(source_name="greenhouse", is_healthy=True, latency_ms=10.0, message="OK")
+    api_pipeline.get_health = AsyncMock(return_value=mock_health)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -76,6 +81,9 @@ async def test_dashboard_view_html(test_db_session):
         yield test_db_session
 
     app.dependency_overrides[get_db] = override_get_db
+
+    mock_health = SourceHealthResult(source_name="greenhouse", is_healthy=True, latency_ms=10.0, message="OK")
+    views_pipeline.get_health = AsyncMock(return_value=mock_health)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

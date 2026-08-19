@@ -21,6 +21,12 @@ class JobSource(ABC):
     def __init__(self, http_client: ResilientHttpClient):
         self.http_client = http_client
 
+    @property
+    @abstractmethod
+    def base_url(self) -> str:
+        """Returns the base API URL of the source."""
+        pass
+
     @abstractmethod
     def source_name(self) -> str:
         """Returns the identifier name of the source (e.g. 'greenhouse', 'lever')."""

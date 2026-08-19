@@ -12,8 +12,8 @@ class Source(Base):
     base_url = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     rate_limit_rps = Column(Float, default=2.0, nullable=False)
-    created_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     jobs = relationship("Job", back_populates="source", cascade="all, delete-orphan")

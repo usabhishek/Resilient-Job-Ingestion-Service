@@ -15,8 +15,8 @@ class IngestionRun(Base):
     fallback_source_id = Column(Integer, ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
     trigger_type = Column(String(20), default="MANUAL", nullable=False)
     status = Column(String(30), nullable=False, index=True) # SUCCESS, FALLBACK_SUCCESS, PARTIAL, FAILED, EMPTY_RESPONSE
-    started_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False)
-    finished_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
     duration_ms = Column(Integer, nullable=True)
 
     fetched_count = Column(Integer, default=0, nullable=False)
@@ -28,7 +28,7 @@ class IngestionRun(Base):
 
     error_message = Column(Text, nullable=True)
     error_details = Column(JSON, nullable=True)
-    created_at = Column(DateTime, server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     # Relationships
     source = relationship("Source", foreign_keys=[source_id], back_populates="runs")

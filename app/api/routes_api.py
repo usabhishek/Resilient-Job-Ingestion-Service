@@ -8,10 +8,11 @@ from app.schemas.run import IngestRequest, IngestionSummary, IngestionRunRespons
 from app.schemas.job import JobResponse, JobListResponse
 from app.schemas.source import SourceResponse, SourceHealthResponse
 from app.services.repository import JobRepository
-from app.services.ingestion import IngestionPipeline
+from app.services.ingestion import shared_pipeline
+from app.core.exceptions import PermanentSourceError
 
 router = APIRouter()
-pipeline = IngestionPipeline()
+pipeline = shared_pipeline
 
 @router.get("/health", tags=["Health"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -24,9 +25,9 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
 
-    # Source health pings
-    gh_health = await pipeline.adapters["greenhouse"].health_check()
-    lv_health = await pipeline.adapters["lever"].health_check()
+    # Cached, fast-fail source health pings
+    gh_health = await pipeline.get_health("greenhouse")
+    lv_health = await pipeline.get_health("lever")
 
     is_overall_healthy = db_status == "healthy"
 
@@ -64,9 +65,13 @@ async def trigger_ingestion(
             allow_fallback=request.allow_fallback,
             trigger_type="API"
         )
+        if summary.status == "FAILED" and summary.error_message and "permanent" in summary.error_message.lower():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=summary.error_message)
         return summary
-    except ValueError as val_err:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(val_err))
+    except (ValueError, PermanentSourceError) as client_err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(client_err))
+    except HTTPException:
+        raise
     except Exception as err:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Ingestion failed: {str(err)}")
 

@@ -4,11 +4,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.repository import JobRepository
-from app.services.ingestion import IngestionPipeline
+from app.services.ingestion import shared_pipeline
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
-pipeline = IngestionPipeline()
+pipeline = shared_pipeline
 
 @router.get("/", response_class=HTMLResponse, tags=["Dashboard"])
 async def dashboard_view(request: Request, db: AsyncSession = Depends(get_db)):
@@ -21,9 +21,9 @@ async def dashboard_view(request: Request, db: AsyncSession = Depends(get_db)):
     recent_runs = await JobRepository.list_recent_runs(db, limit=10)
     jobs, total_jobs_count = await JobRepository.list_jobs(db, page=1, limit=15)
 
-    # Health checks
-    gh_health = await pipeline.adapters["greenhouse"].health_check()
-    lv_health = await pipeline.adapters["lever"].health_check()
+    # Cached, fast-fail health checks
+    gh_health = await pipeline.get_health("greenhouse")
+    lv_health = await pipeline.get_health("lever")
 
     return templates.TemplateResponse(
         request=request,
