@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &bull; Acdyon Ingestion Engine{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="page-title">Operational Ingestion Console</h1>
+        <p class="page-subtitle">Paced, source-abstracted ingestion pipeline with exponential retry and dynamic fallback.</p>
+    </div>
+</div>
+
+<!-- Source Health & Status Row -->
+<div class="section-title">Source Health & Upstream Connectivity</div>
+<div class="grid grid-2">
+    <!-- Greenhouse Card -->
+    <div class="card health-card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <span class="source-badge greenhouse">Greenhouse</span>
+                <span class="card-tag">Primary Source</span>
+            </div>
+            <span class="status-pill {% if health.greenhouse.is_healthy %}pill-success{% else %}pill-danger{% endif %}">
+                {% if health.greenhouse.is_healthy %}Healthy ({{ health.greenhouse.latency_ms }}ms){% else %}Degraded{% endif %}
+            </span>
+        </div>
+        <div class="card-body">
+            <p class="source-desc">Direct public board ingestion via <code>boards-api.greenhouse.io</code>. Normalizes title, content, location, and metadata.</p>
+            <div class="source-meta">
+                <span>Rate Pacing: <strong>2.0 req/s</strong></span>
+                <span>Retry Policy: <strong>Exp. Backoff (Max 3)</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lever Card -->
+    <div class="card health-card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <span class="source-badge lever">Lever</span>
+                <span class="card-tag">Fallback Source</span>
+            </div>
+            <span class="status-pill {% if health.lever.is_healthy %}pill-success{% else %}pill-danger{% endif %}">
+                {% if health.lever.is_healthy %}Healthy ({{ health.lever.latency_ms }}ms){% else %}Degraded{% endif %}
+            </span>
+        </div>
+        <div class="card-body">
+            <p class="source-desc">Secondary public postings ingestion via <code>api.lever.co</code>. Engaged on primary timeout, 429 exhaustion, or 5xx failures.</p>
+            <div class="source-meta">
+                <span>Rate Pacing: <strong>2.0 req/s</strong></span>
+                <span>Retry Policy: <strong>Exp. Backoff (Max 3)</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Overview Grid -->
+<div class="section-title">Ingestion Performance Metrics</div>
+<div class="grid grid-4 metrics-grid">
+    <div class="card metric-card">
+        <div class="metric-label">Total Stored Jobs</div>
+        <div class="metric-value" id="metric-total-jobs">{{ total_jobs_count }}</div>
+        <div class="metric-sub">Deduplicated in PostgreSQL</div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-label">Total Ingestion Runs</div>
+        <div class="metric-value">{{ metrics.total_runs }}</div>
+        <div class="metric-sub">Audit trail logged</div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-label">Last Ingestion Status</div>
+        <div class="metric-value status-text-sm">
+            {% if metrics.last_run %}
+                <span class="status-pill {% if metrics.last_run.status == 'SUCCESS' or metrics.last_run.status == 'FALLBACK_SUCCESS' %}pill-success{% elif metrics.last_run.status == 'PARTIAL' or metrics.last_run.status == 'EMPTY_RESPONSE' %}pill-warning{% else %}pill-danger{% endif %}">
+                    {{ metrics.last_run.status }}
+                </span>
+            {% else %}
+                <span class="status-pill pill-neutral">No Runs</span>
+            {% endif %}
+        </div>
+        <div class="metric-sub">{% if metrics.last_run %}{{ metrics.last_run.duration_ms }}ms duration{% else %}Pending trigger{% endif %}</div>
+    </div>
+    <div class="card metric-card">
+        <div class="metric-label">Last Ingest Yield</div>
+        <div class="metric-value">
+            {% if metrics.last_run %}
+                <span class="text-success">+{{ metrics.last_run.new_count }}</span> <span class="text-muted">/ {{ metrics.last_run.fetched_count }}</span>
+            {% else %}
+                0
+            {% endif %}
+        </div>
+        <div class="metric-sub">{% if metrics.last_run %}{{ metrics.last_run.duplicate_count }} duplicates skipped{% else %}0 duplicates{% endif %}</div>
+    </div>
+</div>
+
+<!-- Trigger Ingestion Form Card -->
+<div class="card trigger-card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Trigger On-Demand Ingestion</h2>
+            <p class="card-subtitle">Execute paced fetch, schema validation, deduplication, and fallback.</p>
+        </div>
+    </div>
+    <div class="card-body">
+        <form id="ingest-form" class="ingest-form" onsubmit="handleIngest(event)">
+            <div class="form-group">
+                <label for="source-select">Primary Source</label>
+                <select id="source-select" class="form-control" onchange="updatePresetBoards()">
+                    <option value="greenhouse" selected>Greenhouse (Primary)</option>
+                    <option value="lever">Lever (Direct)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="board-token">Company / Board Token</label>
+                <input type="text" id="board-token" class="form-control" value="cloudflare" placeholder="e.g. cloudflare, stripe, figma, netflix" required>
+            </div>
+            <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="allow-fallback" checked>
+                    <span>Enable Automatic Fallback to Alternate Source on Outage</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit" id="btn-ingest" class="btn btn-primary">
+                    <span id="btn-spinner" class="spinner hidden"></span>
+                    <span id="btn-text">Execute Ingestion</span>
+                </button>
+            </div>
+        </form>
+        <div id="ingest-result" class="ingest-result hidden"></div>
+    </div>
+</div>
+
+<!-- Recent Ingestion Runs Table -->
+<div class="card table-card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Recent Ingestion Audit Trail</h2>
+            <p class="card-subtitle">Full run history with breakdown of fetched, valid, new, and deduplicated records.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Fetched</th>
+                    <th>Valid</th>
+                    <th>New</th>
+                    <th>Duplicates</th>
+                    <th>Failed</th>
+                    <th>Duration</th>
+                    <th>Executed At</th>
+                </tr>
+            </thead>
+            <tbody id="runs-table-body">
+                {% for run in recent_runs %}
+                <tr>
+                    <td><span class="code-badge">{{ run.id[:8] }}...</span></td>
+                    <td>
+                        <span class="source-badge {{ run.source.name }}">{{ run.source.name }}</span>
+                        {% if run.fallback_source %}
+                            <span class="fallback-arrow">&rarr;</span>
+                            <span class="source-badge {{ run.fallback_source.name }}">{{ run.fallback_source.name }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-pill {% if run.status == 'SUCCESS' or run.status == 'FALLBACK_SUCCESS' %}pill-success{% elif run.status == 'PARTIAL' or run.status == 'EMPTY_RESPONSE' %}pill-warning{% else %}pill-danger{% endif %}">
+                            {{ run.status }}
+                        </span>
+                    </td>
+                    <td><strong>{{ run.fetched_count }}</strong></td>
+                    <td><span class="text-valid">{{ run.valid_count }}</span></td>
+                    <td><span class="text-success">+{{ run.new_count }}</span></td>
+                    <td><span class="text-muted">{{ run.duplicate_count }}</span></td>
+                    <td><span class="{% if run.failed_count > 0 %}text-danger{% else %}text-muted{% endif %}">{{ run.failed_count }}</span></td>
+                    <td>{{ run.duration_ms or 0 }}ms</td>
+                    <td><span class="text-sm">{{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">No ingestion runs recorded yet. Trigger one above!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Normalized Jobs Explorer -->
+<div class="card table-card">
+    <div class="card-header flex-between">
+        <div>
+            <h2 class="card-title">Normalized Jobs Explorer</h2>
+            <p class="card-subtitle">Standardized schema records deduplicated by <code>(source_id, external_id)</code>.</p>
+        </div>
+        <div class="filter-group">
+            <input type="text" id="job-search" class="form-control-sm" placeholder="Filter by title, company, location..." onkeyup="filterJobsTable()">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" id="jobs-table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Company</th>
+                    <th>Location</th>
+                    <th>Source</th>
+                    <th>External ID</th>
+                    <th>Posted At</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="jobs-table-body">
+                {% for job in jobs %}
+                <tr class="job-row">
+                    <td><strong class="job-title-text">{{ job.title }}</strong></td>
+                    <td><span class="company-text">{{ job.company }}</span></td>
+                    <td><span class="location-text">{{ job.location }}</span></td>
+                    <td><span class="source-badge {{ job.source.name }}">{{ job.source.name }}</span></td>
+                    <td><span class="code-badge">{{ job.external_id }}</span></td>
+                    <td><span class="text-sm">{% if job.posted_at %}{{ job.posted_at.strftime('%Y-%m-%d') }}{% else %}N/A{% endif %}</span></td>
+                    <td>
+                        <a href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer" class="btn-link">View Listing &rarr;</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No jobs currently in database.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
