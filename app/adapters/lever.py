@@ -93,6 +93,10 @@ class LeverSource(JobSource):
         """
         Verifies connectivity to Lever API using a fast-fail lightweight check.
         Strict 3.0s timeout with 0 retries to prevent blocking dashboard/health endpoints.
+
+        Note: The health check probes API reachability, not whether a specific company
+        board exists. Lever returns 404 for unknown company slugs, which is still a valid
+        response from a healthy API. Only network errors or 5xx indicate a real outage.
         """
         start = time.perf_counter()
         try:
@@ -110,15 +114,17 @@ class LeverSource(JobSource):
 
             import httpx
             async with httpx.AsyncClient(timeout=httpx.Timeout(3.0, connect=2.0), headers={"User-Agent": "AcdyonHealth/1.0", "Accept": "application/json"}) as client:
-                resp = await client.get(f"{self.BASE_URL}/netflix", params={"mode": "json"})
+                resp = await client.get(f"{self.BASE_URL}/lever", params={"mode": "json"})
                 latency = (time.perf_counter() - start) * 1000.0
-                is_ok = resp.status_code == 200
+                # Any HTTP response (including 404 for unknown company) means the API is reachable.
+                # Only 5xx responses indicate Lever's servers are actually unhealthy.
+                is_ok = resp.status_code < 500
                 return SourceHealthResult(
                     source_name="lever",
                     is_healthy=is_ok,
                     latency_ms=round(latency, 2),
                     status_code=resp.status_code,
-                    message="Lever API is responsive." if is_ok else f"Lever returned HTTP {resp.status_code}"
+                    message="Lever API is responsive." if is_ok else f"Lever server error: HTTP {resp.status_code}"
                 )
         except Exception as e:
             latency = (time.perf_counter() - start) * 1000.0
@@ -128,3 +134,4 @@ class LeverSource(JobSource):
                 latency_ms=round(latency, 2),
                 message=f"Lever health check failed: {str(e)}"
             )
+
