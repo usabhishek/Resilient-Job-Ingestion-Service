@@ -9,10 +9,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    # Database settings
-    # Default to sqlite+aiosqlite for local zero-dependency testing,
-    # or postgresql+asyncpg for Supabase PostgreSQL
-    DATABASE_URL: str = "sqlite+aiosqlite:///./jobs.db"
+    # Database connection string — MUST be set via environment variable.
+    # Production: postgresql+asyncpg://postgres:password@db.xxx.supabase.co:5432/postgres
+    DATABASE_URL: str  # Required — raises ValidationError on startup if not set
     
     # Ingestion & Network Resilience settings
     DEFAULT_RATE_LIMIT_RPS: float = 2.0
