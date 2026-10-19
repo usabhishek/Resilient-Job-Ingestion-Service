@@ -2,8 +2,6 @@
 
 A production-minded, source-abstracted job ingestion system built with **FastAPI**, **httpx**, **Pydantic v2**, **SQLAlchemy 2.0**, and **Supabase PostgreSQL** (with automatic local SQLite fallback).
 
-Designed for the **Acdyon Technologies Engineering Assessment (Part 1)**, prioritizing reliability, rate pacing, exponential backoff, schema normalization, deduplication, and low-risk Terms-of-Service compliance.
-
 ---
 
 ## 🌟 Key Architectural Features
