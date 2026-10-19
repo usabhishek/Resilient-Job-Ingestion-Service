@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+<div class="card auth-card">
+    <h1>Create account</h1>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    <form method="post" action="/signup" class="stack">
+        <label>Name <input type="text" name="name" value="{{ name or '' }}" maxlength="60" required autofocus></label>
+        <label>Email <input type="email" name="email" value="{{ email or '' }}" required></label>
+        <label>Password <input type="password" name="password" minlength="8" required>
+            <small class="muted">At least 8 characters</small></label>
+        <label>{{ question }} <input type="text" name="answer" required>
+            <small class="muted">Used to reset your password if you forget it</small></label>
+        <button type="submit" class="btn btn-primary">Sign up</button>
+    </form>
+    <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+</div>
+{% endblock %}

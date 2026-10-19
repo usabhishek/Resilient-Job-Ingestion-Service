@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}My jobs{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Find jobs from a company</h2>
+    <form id="ingest-form" class="row">
+        <select id="source" aria-label="Source">
+            <option value="greenhouse" selected>Greenhouse</option>
+            <option value="lever">Lever</option>
+        </select>
+        <input type="text" id="board" value="cloudflare" placeholder="Company, e.g. cloudflare" aria-label="Company" required>
+        <label class="check">Posted in
+            <select id="period" aria-label="Jobs posted in">
+                <option value="" selected>Any time</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 1 month</option>
+                <option value="60">Last 2 months</option>
+                <option value="180">Last 6 months</option>
+                <option value="365">Last 1 year</option>
+            </select>
+        </label>
+        <label class="check"><input type="checkbox" id="fallback" checked> Use backup source if this one fails</label>
+        <button type="submit" id="fetch-btn" class="btn btn-primary">Fetch jobs</button>
+    </form>
+    <div id="ingest-msg" class="alert hidden"></div>
+</section>
+
+<section class="card">
+    <div class="tabs">
+        <button type="button" class="tab active" data-tab="all">All jobs</button>
+        <button type="button" class="tab" data-tab="applied">Applied</button>
+    </div>
+    <div class="list-head">
+        <h2 id="list-title">All jobs <span id="total" class="muted"></span></h2>
+        <input type="search" id="search" placeholder="Search title, company or location" aria-label="Search jobs">
+    </div>
+    <div id="bulk" class="bulk hidden">
+        <label class="check"><input type="checkbox" id="select-all"> Select all on this page</label>
+        <span id="selected-count" class="muted">0 selected</span>
+        <button type="button" id="delete-selected" class="btn btn-danger btn-sm" disabled>Delete selected</button>
+    </div>
+    <div id="jobs"></div>
+    <div class="pager">
+        <button type="button" id="prev" class="btn btn-ghost">&larr; Previous</button>
+        <span id="page-info" class="muted"></span>
+        <button type="button" id="next" class="btn btn-ghost">Next &rarr;</button>
+    </div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/js/user.js"></script>{% endblock %}

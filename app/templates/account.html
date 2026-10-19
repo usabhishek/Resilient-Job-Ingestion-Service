@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}My account{% endblock %}
+{% block content %}
+<p><a href="/">&larr; Back to my jobs</a></p>
+
+<section class="card">
+    <h2>Profile</h2>
+    <p class="muted">{{ user.email }}</p>
+    <form id="name-form" class="row">
+        <input type="text" id="name" value="{{ user.name }}" maxlength="60" required aria-label="Name">
+        <button type="submit" class="btn btn-primary">Save name</button>
+    </form>
+    <div id="name-msg" class="alert hidden"></div>
+</section>
+
+<section class="card">
+    <h2>Change password</h2>
+    <form id="password-form" class="stack narrow">
+        <input type="password" id="current" placeholder="Current password" required>
+        <input type="password" id="new" placeholder="New password (8+ characters)" minlength="8" required>
+        <button type="submit" class="btn btn-primary">Change password</button>
+    </form>
+    <div id="password-msg" class="alert hidden"></div>
+</section>
+
+<section class="card danger">
+    <h2>Delete my account</h2>
+    <p class="muted">Removes your account, all your jobs and your ingestion history. This cannot be undone.</p>
+    <form id="delete-form" class="row">
+        <input type="password" id="delete-password" placeholder="Confirm with your password" required>
+        <button type="submit" class="btn btn-danger">Delete my account</button>
+    </form>
+    <div id="delete-msg" class="alert hidden"></div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/js/account.js"></script>{% endblock %}

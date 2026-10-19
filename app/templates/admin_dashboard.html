@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<section class="grid">
+    <div class="card stat"><div class="muted">Users</div><div id="s-users" class="stat-value">–</div></div>
+    <div class="card stat"><div class="muted">Saved jobs</div><div id="s-jobs" class="stat-value">–</div></div>
+    <div class="card stat"><div class="muted">Ingestion runs</div><div id="s-runs" class="stat-value">–</div></div>
+    <div class="card stat"><div class="muted">Job APIs</div><div id="s-health">–</div></div>
+</section>
+
+<section class="card">
+    <h2>Users</h2>
+    <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Jobs</th><th>Runs</th><th>Last ingestion</th><th>Actions</th></tr></thead>
+        <tbody id="users-body"></tbody>
+    </table></div>
+</section>
+
+<section class="card">
+    <h2>All ingestions</h2>
+    <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>User</th><th>Source</th><th>Status</th><th>Fetched</th><th>New</th><th>Duplicates</th><th>Failed</th><th>When</th></tr></thead>
+        <tbody id="runs-body"></tbody>
+    </table></div>
+    <div class="pager">
+        <button type="button" id="prev" class="btn btn-ghost">&larr; Previous</button>
+        <span id="page-info" class="muted"></span>
+        <button type="button" id="next" class="btn btn-ghost">Next &rarr;</button>
+    </div>
+</section>
+
+<section class="card danger">
+    <h2>Danger zone</h2>
+    <p class="muted">Deletes every job and ingestion run of every user. Accounts are kept.</p>
+    <button type="button" id="clear-all" class="btn btn-danger">Clear all ingestions for everyone</button>
+    <div id="admin-msg" class="alert hidden"></div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/js/admin.js"></script>{% endblock %}

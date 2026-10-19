@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Forgot password{% endblock %}
+{% block content %}
+<div class="card auth-card">
+    <h1>Reset password</h1>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    <form method="post" action="/forgot-password" class="stack">
+        <label>Email <input type="email" name="email" value="{{ email or '' }}" required autofocus></label>
+        <label>{{ question }} <input type="text" name="answer" required></label>
+        <label>New password <input type="password" name="new_password" minlength="8" required></label>
+        <button type="submit" class="btn btn-primary">Change password</button>
+    </form>
+    <p class="muted"><a href="/login">Back to log in</a></p>
+</div>
+{% endblock %}

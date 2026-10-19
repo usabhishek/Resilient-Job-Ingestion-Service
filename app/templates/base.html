@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Ingestion{% endblock %}</title>
+    <script>document.documentElement.setAttribute("data-theme", localStorage.getItem("theme") || "dark");</script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a class="brand" href="/">⚡ Job Ingestion</a>
+            <div class="nav-right">
+                {% if user %}
+                    <span class="welcome">Welcome, {{ user.name }}</span>
+                    {% if user.role == 'admin' %}
+                        <span class="role-badge">Admin</span>
+                    {% else %}
+                        <a href="/account" class="nav-link">Account</a>
+                    {% endif %}
+                {% endif %}
+                <button type="button" id="theme-toggle" class="icon-btn" title="Change theme" aria-label="Change theme">🌓</button>
+                {% if user %}
+                    <form method="post" action="/logout"><button type="submit" class="btn btn-ghost">Log out</button></form>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
